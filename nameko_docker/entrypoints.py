@@ -7,7 +7,15 @@ from . import constants
 from . import client
 
 
+log = logging.getLogger('nameko-docker')
+
+
 class DockerEventsManager(SharedExtension, ProviderCollector):
+    """Listen for docker events and dispatch them to entrypoint handlers.
+
+    For information about the python docker clients events see:
+    https://docker-py.readthedocs.io/en/stable/client.html#docker.client.DockerClient.events
+    """
     def __init__(self):
         super().__init__()
 
@@ -25,7 +33,7 @@ class DockerEventsManager(SharedExtension, ProviderCollector):
         until = datetime.utcnow() + delta
         while True:
             for event in self.docker.events(since=since, until=until, decode=True):
-                print(event)
+                log.debug(event)
                 self.dispatch_event(event)
             since = until
             until = datetime.utcnow() + delta
@@ -38,8 +46,7 @@ class DockerEventsManager(SharedExtension, ProviderCollector):
 
 
 class DockerEventEntrypoint(Entrypoint):
-    """See
-    https://docker-py.readthedocs.io/en/stable/client.html#docker.client.DockerClient.events
+    """Base class for docker event entrypoints.
 
     For available types and events see:
     See https://docs.docker.com/engine/reference/commandline/events/
@@ -72,6 +79,9 @@ class DockerEventEntrypoint(Entrypoint):
 
 _event_types = tuple('container image plugin volume network daemon service node secret config'.split(' '))
 class DockerEventsEntrypointFactory():
+    """Factory class that creates event type specific
+    DockerEventEntrypoint subclasses.
+    """
     def __getattribute__(self, _type):
         if not _type in _event_types:
             raise AttributeError('Unknown docker event type: %s' % _type)
