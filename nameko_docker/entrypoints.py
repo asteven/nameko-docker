@@ -10,14 +10,13 @@ from . import client
 class DockerEventsManager(SharedExtension, ProviderCollector):
     def __init__(self):
         super().__init__()
-        self.clients = {}
 
     def setup(self):
         self.docker = client.get_client(self.container.config.get(constants.CONFIG_KEY, None))
 
     def start(self):
         self.container.spawn_managed_thread(
-            self.run, identifier='{0}EntryPoint.run'.format(self.__class__.__name__)
+            self.run, identifier=self.__class__.__name__
         )
 
     def run(self):
@@ -71,13 +70,13 @@ class DockerEventEntrypoint(Entrypoint):
         )
 
 
-_event_types = tuple('container image plugin volume network daemon service node secret config '.split(' '))
+_event_types = tuple('container image plugin volume network daemon service node secret config'.split(' '))
 class DockerEventsEntrypointFactory():
     def __getattribute__(self, _type):
         if not _type in _event_types:
             raise AttributeError('Unknown docker event type: %s' % _type)
         entrypoint_class_name = _type.title() + 'DockerEventEntrypoint'
-        entrypoint_class = type(entrypoint_class_name, (DockerEventEntrypoint,),{"_type": _type})
+        entrypoint_class = type(entrypoint_class_name, (DockerEventEntrypoint,),{'_type': _type})
         return entrypoint_class.decorator
 
 
