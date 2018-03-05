@@ -66,3 +66,7 @@ class ExampleService(object):
     @docker_events.network('connect')
     def handle_network_connect(self, *args, **kwargs):
         print('handle_network_connect: %s; %s' % (args, kwargs))
+
+    @docker_events.network('disconnect')
+    def handle_network_disconnect(self, *args, **kwargs):
+        print('handle_network_disconnect: %s; %s' % (args, kwargs))
