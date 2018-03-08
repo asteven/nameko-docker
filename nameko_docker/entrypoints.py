@@ -7,7 +7,7 @@ from . import constants
 from . import client
 
 
-log = logging.getLogger('nameko-docker')
+log = logging.getLogger('nameko_docker')
 
 
 class DockerEventsManager(SharedExtension, ProviderCollector):
@@ -23,12 +23,32 @@ class DockerEventsManager(SharedExtension, ProviderCollector):
         self.docker = client.get_client(self.container.config.get(constants.CONFIG_KEY, None))
 
     def start(self):
+        log.info('Starting {0}'.format(
+            self.__class__.__name__
+        ))
+
+        # Fake a 'container.running' event for all running containers.
+        for container in self.docker.containers.list():
+            event = {
+                'Type': 'container',
+                'Action': 'running',
+                'id': container.attrs['Id'],
+                'from': container.attrs['Image'],
+                'time': container.attrs['Created'],
+            }
+            self.dispatch_event(event)
+
         self.container.spawn_managed_thread(
             self.run, identifier=self.__class__.__name__
         )
 
+    def stop(self):
+        log.info('Stopping {0}'.format(
+            self.__class__.__name__
+        ))
+
     def run(self):
-        delta = timedelta(seconds=2)
+        delta = timedelta(seconds=5)
         since = datetime.utcnow()
         until = datetime.utcnow() + delta
         while True:
@@ -40,7 +60,6 @@ class DockerEventsManager(SharedExtension, ProviderCollector):
 
     def dispatch_event(self, event):
         for provider in self._providers:
-            #if provider.bot_name == bot_name:
             if provider.filter_event(event):
                 provider.handle_event(event)
 
